@@ -1,0 +1,59 @@
+import pandas as pd
+import os
+
+def load_and_process_data(filepath):
+    """
+    Loads the consumption dataset, parses dates, and cleans column names.
+    Returns a DataFrame with daily aggregated consumption.
+    """
+    if not os.path.exists(filepath):
+        raise FileNotFoundError(f"File not found: {filepath}")
+
+    print(f"Loading data from {filepath}...")
+    df = pd.read_csv(filepath)
+
+    # 1. Standardize column names
+    # Expected cols: Date Time Served, Bar Name, Alcohol Type, Brand Name,
+    #                Opening Balance (ml), Purchase (ml), Consumed (ml), Closing Balance (ml)
+    df.columns = [c.strip() for c in df.columns]
+
+    # 2. Parse DateTime
+    # 'Date Time Served' format seems to be M/D/YYYY H:M
+    df['Date'] = pd.to_datetime(df['Date Time Served']).dt.date
+
+    # 3. Clean numeric columns
+    numeric_cols = ['Opening Balance (ml)', 'Purchase (ml)', 'Consumed (ml)', 'Closing Balance (ml)']
+    for col in numeric_cols:
+        # Check if the column is of object type (string) before applying string methods
+        if df[col].dtype == 'object':
+             # Remove commas if present, handle potential errors
+            df[col] = df[col].astype(str).str.replace(',', '', regex=False)
+
+        df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
+
+    # 4. Handle negative consumption (data error?) -> Clip to 0
+    df['Consumed (ml)'] = df['Consumed (ml)'].clip(lower=0)
+
+    # 5. Aggregate to Daily level
+    # We want Total Consumption per Bar per Brand per Date
+    daily_df = df.groupby(['Date', 'Bar Name', 'Alcohol Type', 'Brand Name'], as_index=False).agg({
+        'Consumed (ml)': 'sum',
+        'Opening Balance (ml)': 'first', # Approximation
+        'Purchase (ml)': 'sum',
+        'Closing Balance (ml)': 'last'  # Approximation
+    })
+
+    # Sort
+    daily_df.sort_values(by=['Bar Name', 'Brand Name', 'Date'], inplace=True)
+
+    print(f"Data loaded. Rows: {len(df)} -> Aggregated Daily Rows: {len(daily_df)}")
+    return daily_df
+
+if __name__ == "__main__":
+    FILE_PATH = "Copy of Consumption Dataset - Dataset.csv"
+    try:
+        df = load_and_process_data(FILE_PATH)
+        print(df.head())
+        print(df.info())
+    except Exception as e:
+        print(f"Error: {e}")

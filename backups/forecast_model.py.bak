@@ -1,0 +1,59 @@
+import pandas as pd
+import numpy as np
+from data_loader import load_and_process_data
+
+def calculate_par_levels(daily_df, lead_time_days=3, service_level_z=1.65):
+    """
+    Calculates Par Levels for each item at each bar.
+
+    Formula:
+    Par Level = (Avg Daily Usage * Lead Time) + Safety Stock
+    Safety Stock = Z * StdDev of Demand * sqrt(Lead Time)
+    """
+
+    # 1. Calculate stats per (Bar, Brand)
+    stats = daily_df.groupby(['Bar Name', 'Brand Name'])['Consumed (ml)'].agg(
+        mean_daily_usage='mean',
+        std_daily_usage='std',
+        total_days='count'
+    ).reset_index()
+
+    # Fill NaN std (single data point) with 0 or mean*0.5 (conservative)
+    stats['std_daily_usage'] = stats['std_daily_usage'].fillna(stats['mean_daily_usage'] * 0.5)
+
+    # 2. Compute Metrics
+    stats['lead_time_demand'] = stats['mean_daily_usage'] * lead_time_days
+    stats['safety_stock'] = service_level_z * stats['std_daily_usage'] * np.sqrt(lead_time_days)
+    stats['recommended_par_level'] = stats['lead_time_demand'] + stats['safety_stock']
+
+    # Round up to nearest whole unit (if tracking bottles) or keep as ml
+    # For now, let's keep as ml, but maybe helpful to convert to 'Bottles' (750ml) later
+    stats['par_level_ml'] = np.ceil(stats['recommended_par_level'])
+
+    return stats
+
+def run_analysis(input_file):
+    df = load_and_process_data(input_file)
+
+    # Basic EDA
+    print("--- Data Summary ---")
+    print(df.describe())
+
+    # Calculate Pars
+    par_levels = calculate_par_levels(df)
+
+    print("\n--- Recommended Par Levels (Top 10 High Demand) ---")
+    top_items = par_levels.sort_values(by='mean_daily_usage', ascending=False).head(10)
+    print(top_items[['Bar Name', 'Brand Name', 'mean_daily_usage', 'par_level_ml']].to_string())
+
+    return par_levels
+
+if __name__ == "__main__":
+    FILE_PATH = "Copy of Consumption Dataset - Dataset.csv"
+    try:
+        pars = run_analysis(FILE_PATH)
+        # Save results
+        pars.to_csv("recommended_par_levels.csv", index=False)
+        print("\nRecommendations saved to 'recommended_par_levels.csv'")
+    except Exception as e:
+        print(f"Error: {e}")

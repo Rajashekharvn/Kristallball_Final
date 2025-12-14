@@ -4,28 +4,22 @@ import numpy as np
 from data_loader import load_and_process_data
 
 def calculate_par_levels(daily_df, lead_time_days=3, service_level_z=1.65, bottle_ml=750):
-    """
-    Calculates Par Levels for each item at each bar.
-    Returns a DataFrame with par in ml and in bottles (rounded up).
-    """
 
     stats = daily_df.groupby(['Bar Name', 'Brand Name'])['Consumed (ml)'].agg(
-        mean_daily_usage='mean', # mean daily usage
-        std_daily_usage='std', # standard deviation of daily usage
-        total_days='count' # total number of days
-    ).reset_index() # reset index
+        mean_daily_usage='mean',
+        std_daily_usage='std',
+        total_days='count'
+    ).reset_index()
 
-    # If std is NaN (single observation), use a conservative estimate:
-    # here we use 50% of mean (heuristic). Document this choice.
-    stats['std_daily_usage'] = stats['std_daily_usage'].fillna(stats['mean_daily_usage'] * 0.5) # fill NaN with 50% of mean
+    # handle single observation items using heuristic (50% of mean)
+    stats['std_daily_usage'] = stats['std_daily_usage'].fillna(stats['mean_daily_usage'] * 0.5)
 
-    # Compute lead-time demand and safety stock
-    stats['lead_time_demand'] = stats['mean_daily_usage'] * lead_time_days  # lead-time demand
-    stats['safety_stock'] = service_level_z * stats['std_daily_usage'] * np.sqrt(lead_time_days) # safety stock
-    stats['recommended_par_level_ml'] = np.ceil(stats['lead_time_demand'] + stats['safety_stock']) # recommended par level in ml
+    # Lead Time Demand + Safety Stock
+    stats['lead_time_demand'] = stats['mean_daily_usage'] * lead_time_days
+    stats['safety_stock'] = service_level_z * stats['std_daily_usage'] * np.sqrt(lead_time_days)
 
-    # Also provide bottles (rounded up)
-    stats['par_bottles_750ml'] = np.ceil(stats['recommended_par_level_ml'] / bottle_ml).astype(int) # recommended par level in bottles
+    stats['recommended_par_level_ml'] = np.ceil(stats['lead_time_demand'] + stats['safety_stock'])
+    stats['par_bottles_750ml'] = np.ceil(stats['recommended_par_level_ml'] / bottle_ml).astype(int)
 
     return stats
 

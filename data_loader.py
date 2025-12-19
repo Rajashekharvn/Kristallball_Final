@@ -49,7 +49,7 @@ def load_and_process_data(filepath, zero_threshold=1e-6):
     daily_df.reset_index(drop=True, inplace=True)
 
     print(f"Data loaded. Raw rows: {len(df)} -> Aggregated daily rows: {len(daily_df)}")
-    return daily_df
+    return daily_df #this will return daily df aggregate to the user
 
 # run as script
 if __name__ == "__main__":
@@ -59,4 +59,4 @@ if __name__ == "__main__":
         print(df.head()) # print first 5 rows
         print(df.info()) # print info
     except Exception as e: # catch any errors
-        print(f"Error: {e}")
+        print(f"Error: {e}") # print error with 'e'

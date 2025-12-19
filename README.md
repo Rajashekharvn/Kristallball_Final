@@ -8,8 +8,8 @@
 
 Hotel bars face two costly problems:
 
-- ❌ **Stockouts** → Lost sales of popular drinks  
-- ❌ **Overstocking** → Locked capital, spoilage, and wasted storage  
+- ❌ **Stockouts** → Lost sales of popular drinks.
+- ❌ **Overstocking** → Locked capital, spoilage, and wasted storage.
 
 Manual estimation of inventory levels doesn’t scale across multiple bars and brands.
 

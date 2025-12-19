@@ -1,77 +1,221 @@
-# Hotel Bar Inventory Optimization System
+# 🍸 Hotel Bar Inventory Optimization System
 
-## 1. Project Overview
-This project is an automated inventory management system designed for a hotel chain with multiple bar locations. It solves the problem of **stockouts** (running out of popular items) and **overstocking** (wasting space/cash on slow movers) by using historical data to scientifically calculate "Par Levels" (target inventory levels).
-
-The system consists of three main components:
-1.  **Data Loader**: Cleans and aggregates raw transaction data.
-2.  **Forecasting Model**: Calculates recommended Par Levels based on consumption variance and safety stock targets.
-3.  **Simulator**: Backtests the recommended levels against history to verify their effectiveness (Service Level).
+> **Data-driven inventory planning to eliminate stockouts and reduce overstocking across multi-location hotel bars.**
 
 ---
 
-## 2. File Structure
-- `data_loader.py`: Script to ingest the raw CSV, clean column names, handling missing values, and aggregate usage to a `(Date, Bar, Brand)` level.
-- `forecast_model.py`: The core logic. Calculates Average Daily Usage (ADU), Standard Deviation, and ultimately the **Par Levels**.
-    - **Output**: `recommended_par_levels.csv`
-- `simulator.py`: A virtual environment that "replays" the past sales history using the new Par Levels to measure performance (Stockouts vs Inventory Held).
-- `recommended_par_levels.csv`: The final actionable report containing the specific milliliter quantity to stock for each item at each bar.
-- `Copy of Consumption Dataset - Dataset.csv`: The input historical data source.
+## 📌 Problem Statement
+
+Hotel bars face two costly problems:
+
+- ❌ **Stockouts** → Lost sales of popular drinks  
+- ❌ **Overstocking** → Locked capital, spoilage, and wasted storage  
+
+Manual estimation of inventory levels doesn’t scale across multiple bars and brands.
+
+This project introduces a **statistical, automated inventory optimization system** that calculates scientifically-derived **Par Levels** and validates them using historical backtesting.
 
 ---
 
-## 3. Methodology & Logic
+## 🎯 Solution Overview
 
-### A. Forecasting Approach
-We use a **statistical inventory control** method suitable for items with variable demand:
+The system uses **historical consumption data** to:
 
-> **Par Level = (Daily Demand × Lead Time) + Safety Stock**
+- Forecast **Average Daily Usage (ADU)**
+- Account for **demand variability**
+- Maintain a **95% service level**
+- Validate recommendations through **simulation**
 
--   **Daily Demand**: Average Daily Usage (ADU) calculated from history.
--   **Lead Time**: Assumed to be **3 Days** (time between ordering and receiving).
--   **Safety Stock**: Buffer inventory to protect against demand spikes.
-    -   Formula: `Z_score × StdDev_Demand × sqrt(Lead_Time)`
-    -   We use a **Z-score of 1.65**, targeting a **95% Service Level** (probability of NOT running out of stock during replenishment).
-
-### B. Simulation Logic
-To validate the numbers, the simulator runs through the historical dates day-by-day:
-1.  **Sales Decrement**: Deduction of `Consumed (ml)` from inventory.
-2.  **Reordering**: When inventory drops below 50% of the Par Level (Reorder Point), an order is placed.
-3.  **Restocking**: Order arrives after 3 days (Lead Time).
-4.  **Metric Tracking**: Counts how many days demand could not be met (Stockout Days).
+### Key Outcomes
+✔ Fewer stockout days  
+✔ Lower excess inventory  
+✔ Data-backed reorder decisions  
+✔ Scalable across multiple bar locations  
 
 ---
 
-## 4. How to Run
+## 🧩 System Architecture
 
-### Prerequisites
-You need Python 3 and pandas installed.
+The project is divided into **three modular components**:
+
+### 1️⃣ Data Loader  
+Prepares raw data for analysis.
+
+**Responsibilities**
+- Load raw CSV consumption data
+- Normalize column names
+- Handle missing / invalid values
+- Aggregate usage at `(Date, Bar, Brand)` level
+
+📄 **File**: `data_loader.py`
+
+---
+
+### 2️⃣ Forecasting Model (Core Engine)
+
+Calculates optimal **Par Levels** using statistical inventory control theory.
+
+**Calculations**
+- Average Daily Usage (ADU)
+- Demand standard deviation
+- Safety stock
+- Final Par Level (in ml)
+
+📄 **File**: `forecast_model.py`  
+📤 **Output**: `recommended_par_levels.csv`
+
+---
+
+### 3️⃣ Inventory Simulator (Backtesting)
+
+Validates the effectiveness of the recommended Par Levels by replaying historical demand.
+
+**Simulation Features**
+- Daily inventory consumption
+- Reorder trigger at **50% of Par Level**
+- 3-day supplier lead time
+- Tracks stockout days
+- Calculates achieved **Service Level**
+
+📄 **File**: `simulator.py`
+
+---
+
+## 📁 Project Structure
+
+```
+├── data_loader.py
+├── forecast_model.py
+├── simulator.py
+├── recommended_par_levels.csv
+├── Copy of Consumption Dataset - Dataset.csv
+└── README.md
+```
+
+---
+
+## 🧠 Inventory Optimization Logic
+
+### 📐 Par Level Formula
+
+```
+Par Level = (Average Daily Demand × Lead Time) + Safety Stock
+```
+
+#### Parameters Used
+| Parameter | Value | Reason |
+|--------|------|-------|
+| Lead Time | 3 Days | Typical supplier turnaround |
+| Z-Score | 1.65 | Targets ~95% service level |
+| Safety Stock | Z × σ × √LeadTime | Covers demand variability |
+
+---
+
+### 🛡 Safety Stock Formula
+
+```
+Safety Stock = Z_score × StdDev(Demand) × sqrt(Lead Time)
+```
+
+This ensures inventory can handle **unexpected spikes in demand** without frequent stockouts.
+
+---
+
+## 🔄 Simulation & Validation
+
+The simulator runs a **day-by-day replay** of historical consumption:
+
+1. Deduct daily consumption
+2. Trigger reorder when inventory < 50% of Par
+3. Restock after 3-day lead time
+4. Track unmet demand
+5. Compute final **Service Level**
+
+✅ A service level above **95%** confirms model reliability.
+
+---
+
+## ⚙️ How to Run the Project
+
+### ✅ Prerequisites
+
+- Python 3.x
+- pandas
+- numpy
+
 ```bash
 python3 -m pip install pandas numpy
 ```
 
-### Step 1: Generate Recommendations
-Run the forecasting model. This reads the dataset, performs the math, and saves the results.
+---
+
+### ▶️ Step 1: Generate Par Level Recommendations
+
 ```bash
 python3 forecast_model.py
 ```
-**Output**: A file named `recommended_par_levels.csv` will be created in the folder.
 
-### Step 2: Validate with Simulation
-Run the simulator to see how these Par Levels perform in practice.
-```bash
-python3 simulator.py
+📄 Output file:
 ```
-**Output**: The script will print the **Service Level** (e.g., 97.10%) to the terminal. A high service level (>95%) indicates the system is working as intended.
+recommended_par_levels.csv
+```
 
 ---
 
-## 5. Interpreting Results
-Open `recommended_par_levels.csv` to see the targets.
+### ▶️ Step 2: Validate with Simulation
 
-| Bar Name | Brand Name | Par Level (ml) | Interpretation |
-| :--- | :--- | :--- | :--- |
-| Taylor's Bar | Budweiser | 1696.0 | Keep ~1.7 Liters (approx 5-6 bottles) on hand. |
-| ... | ... | ... | ... |
+```bash
+python3 simulator.py
+```
 
-**Note**: The system outputs Par Levels in **ml** (Milliliters) to match the input data precision. You may wish to rounded this to the nearest bottle size (e.g., / 750ml) for operational simplicity.
+📊 Terminal Output Example:
+```
+Service Level Achieved: 97.10%
+```
+
+---
+
+## 📊 Output Interpretation
+
+Example from `recommended_par_levels.csv`:
+
+| Bar Name | Brand Name | Par Level (ml) | Operational Meaning |
+|--------|-----------|---------------|---------------------|
+| Taylor's Bar | Budweiser | 1696 | Keep ~1.7L (~5–6 bottles) |
+| Ocean Lounge | Jack Daniels | 2450 | Maintain higher buffer due to demand variability |
+
+📌 **Note**  
+Par levels are expressed in **milliliters** for precision.  
+For operations, consider rounding to standard bottle sizes (e.g., 750 ml).
+
+---
+
+## 🚀 Future Enhancements
+
+- 📈 Time-series forecasting (ARIMA / Prophet)
+- 🏨 Seasonal & event-based demand modeling
+- 🧮 Dynamic reorder points instead of fixed 50%
+- 📊 Dashboard visualization (Power BI / Tableau / Streamlit)
+- ☁️ Cloud deployment & automated data ingestion
+
+---
+
+## 💼 Ideal Use Cases
+
+- Hotel chains with multiple bars
+- Restaurants & lounges
+- Liquor distribution planning
+- Inventory analytics portfolios
+- Supply chain optimization case studies
+
+---
+
+## 🏁 Final Note
+
+This project demonstrates **real-world inventory optimization**, combining:
+- Statistics
+- Data engineering
+- Simulation
+- Business impact analysis
+
+Perfect for **data science**, **analytics**, and **supply-chain engineering** portfolios.
